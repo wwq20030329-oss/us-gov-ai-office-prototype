@@ -6,7 +6,7 @@ import { renderFrame } from "../pixel-office/engine/renderer"
 import { loadCharacterPNGs, loadWallPNG } from "../pixel-office/sprites/pngLoader"
 import { syncAgentsToOffice, type AgentActivity } from "../pixel-office/agentBridge"
 import { filterVisibleBots, getAgentDisplayName } from "../utils/agentDisplay"
-import { PRODUCT_NAME, formatCompactNumber, getOperationalStatus, getToneClasses } from "../utils/officeSemantics"
+import { PRODUCT_NAME, formatCompactNumber, getOperationalStatus, getToneClasses, getWorkflowStage, getWorkflowToneClasses } from "../utils/officeSemantics"
 import MainViewHeader from "../components/MainViewHeader"
 
 const AUTH_TOKEN = localStorage.getItem("gov_ai_auth_token") || ""
@@ -183,6 +183,12 @@ export default function Office({ viewContext, onNavigate }: Props) {
   const onlineCount = sortedBots.filter((b) => getOperationalStatus(b.status, b.sessions).label === "执行中").length
   const totalTokens = sortedBots.reduce((sum, b) => sum + b.totalTokens, 0)
   const totalSessions = sortedBots.reduce((sum, b) => sum + b.sessions, 0)
+  const selectedDesk = sortedBots[0]
+  const selectedDeskName = selectedDesk ? getAgentDisplayName(selectedDesk.name, selectedDesk.displayName) : undefined
+  const selectedDeskOperational = selectedDesk ? getOperationalStatus(selectedDesk.status, selectedDesk.sessions) : null
+  const selectedDeskTone = selectedDeskOperational ? getToneClasses(selectedDeskOperational.tone) : null
+  const selectedDeskWorkflow = selectedDesk ? getWorkflowStage(Date.now() - (selectedDesk.sessions > 0 ? 10 * 60 * 1000 : 8 * 60 * 60 * 1000), selectedDesk.sessions) : null
+  const selectedDeskWorkflowTone = selectedDeskWorkflow ? getWorkflowToneClasses(selectedDeskWorkflow.tone) : null
   const panelClass = "surface-card"
 
   return (
@@ -255,6 +261,49 @@ export default function Office({ viewContext, onNavigate }: Props) {
           </div>
 
           <div className="space-y-4">
+            {selectedDesk && selectedDeskOperational && selectedDeskTone && selectedDeskWorkflow && selectedDeskWorkflowTone && (
+              <div className="rounded-2xl border border-white/10 bg-[#0a0f18] p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-white/55">当前焦点席位</div>
+                <div className="mt-3 rounded-xl border border-white/8 bg-white/5 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-base font-medium text-white">{selectedDeskName}</div>
+                      <div className="mt-1 text-[11px] text-white/55">{selectedDesk.model || '未分配模型'}</div>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] ${selectedDeskTone.pill}`}>{selectedDeskOperational.label}</span>
+                      <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] ${selectedDeskWorkflowTone.pill}`}>{selectedDeskWorkflow.label}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-white/70">
+                    <div className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
+                      <div className="text-white/45">承办位置</div>
+                      <div className="mt-1">{selectedDeskWorkflow.deskHint}</div>
+                    </div>
+                    <div className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
+                      <div className="text-white/45">下一步</div>
+                      <div className="mt-1">{selectedDeskWorkflow.nextStep}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onNavigate?.('sessions', selectedDeskName)}
+                      className="text-[10px] px-2.5 py-1 rounded border border-white/15 text-white/75 hover:bg-white/8 cursor-pointer"
+                    >
+                      查看该席位任务
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate?.('departments', selectedDeskName)}
+                      className="text-[10px] px-2.5 py-1 rounded border border-white/15 text-white/75 hover:bg-white/8 cursor-pointer"
+                    >
+                      查看机构详情
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="rounded-2xl border border-white/10 bg-[#0a0f18] p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-white/55">机构席位活跃排行</div>
               <div className="mt-3 space-y-2">
@@ -321,6 +370,8 @@ export default function Office({ viewContext, onNavigate }: Props) {
             const op = getOperationalStatus(bot.status, bot.sessions)
             const tone = getToneClasses(op.tone)
             const displayName = getAgentDisplayName(bot.name, bot.displayName)
+            const workflow = getWorkflowStage(Date.now() - (bot.sessions > 0 ? 10 * 60 * 1000 : 8 * 60 * 60 * 1000), bot.sessions)
+            const workflowTone = getWorkflowToneClasses(workflow.tone)
             return (
               <div key={bot.name} className="rounded-xl border border-[var(--border-accent)] bg-black/5 p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -337,6 +388,7 @@ export default function Office({ viewContext, onNavigate }: Props) {
                   <span className="font-mono text-[var(--text-primary)]">{formatCompactNumber(bot.totalTokens)}</span>
                 </div>
                 <div className="mt-1 text-[10px] text-[var(--text-secondary)]">{op.description}</div>
+                <div className={`mt-1 text-[10px] ${workflowTone.text}`}>⛓ {workflow.deskHint}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
