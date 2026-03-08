@@ -205,6 +205,14 @@ export default function Office({ viewContext, onNavigate }: Props) {
   const selectedDeskTone = selectedDeskOperational ? getToneClasses(selectedDeskOperational.tone) : null
   const selectedDeskWorkflow = selectedDesk ? getWorkflowStage(Date.now() - (selectedDesk.sessions > 0 ? 10 * 60 * 1000 : 8 * 60 * 60 * 1000), selectedDesk.sessions) : null
   const selectedDeskWorkflowTone = selectedDeskWorkflow ? getWorkflowToneClasses(selectedDeskWorkflow.tone) : null
+  const selectedDeskMessages = useMemo(() => {
+    if (!selectedDeskName) return []
+    return (status?.logs || []).filter((log) => log.source === selectedDeskName).slice(0, 4)
+  }, [status, selectedDeskName])
+  const selectedDeskSummary = selectedDesk ? {
+    currentTask: selectedDesk.sessions > 0 ? `当前持有 ${selectedDesk.sessions} 项进行中的会话任务` : '当前没有进行中的会话，处于待命或归档值守状态',
+    recentTask: selectedDesk.totalTokens > 0 ? `累计令牌 ${formatCompactNumber(selectedDesk.totalTokens)}，可作为近期承办负载参考` : '暂无足够历史负载数据',
+  } : null
   const panelClass = "surface-card"
 
   return (
@@ -365,6 +373,49 @@ export default function Office({ viewContext, onNavigate }: Props) {
                     >
                       查看机构详情
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {selectedDesk && selectedDeskOperational && selectedDeskWorkflow && selectedDeskSummary && (
+              <div className="rounded-2xl border border-white/10 bg-[#0a0f18] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs uppercase tracking-[0.2em] text-white/55">席位详情侧板</div>
+                  <span className="text-[10px] text-white/45">与 Sessions / Departments 共用焦点上下文</span>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-xl border border-white/8 bg-white/5 p-3">
+                    <div className="text-[11px] text-white/45">当前任务</div>
+                    <div className="mt-1 text-sm text-white/90">{selectedDeskSummary.currentTask}</div>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-white/5 p-3">
+                    <div className="text-[11px] text-white/45">最近任务</div>
+                    <div className="mt-1 text-sm text-white/90">{selectedDeskSummary.recentTask}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-white/70">
+                    <div className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
+                      <div className="text-white/45">机构归属</div>
+                      <div className="mt-1">{selectedDeskName}</div>
+                    </div>
+                    <div className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
+                      <div className="text-white/45">活跃状态</div>
+                      <div className="mt-1">{selectedDeskOperational.label} / {selectedDeskWorkflow.label}</div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-white/5 p-3">
+                    <div className="text-[11px] text-white/45">最近消息 / 活跃记录</div>
+                    <div className="mt-2 space-y-2">
+                      {selectedDeskMessages.length > 0 ? selectedDeskMessages.map((log, index) => (
+                        <div key={`${log.timestamp}-${index}`} className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
+                          <div className="text-[10px] text-white/45">{log.timestamp}</div>
+                          <div className="mt-1 text-[11px] leading-relaxed text-white/80">{log.message}</div>
+                        </div>
+                      )) : (
+                        <div className="rounded-lg border border-white/8 bg-black/20 px-3 py-2 text-[11px] text-white/55">
+                          当前没有可用的最近消息，后续可继续接更细的会话轨迹与 handoff 记录。
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
