@@ -47,7 +47,11 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabName>("dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sessionFilter, setSessionFilter] = useState<string | undefined>(undefined)
-  const [viewContext, setViewContext] = useState<MainViewContext>({})
+  const [viewContext, setViewContext] = useState<MainViewContext>(() => {
+    const savedFilter = localStorage.getItem('gov_ai_focus_filter') || undefined
+    const savedLabel = localStorage.getItem('gov_ai_focus_label') || undefined
+    return { focusFilter: savedFilter, focusLabel: savedLabel }
+  })
   const { theme, toggle: toggleTheme } = useTheme()
   const { data, loading, error, lastUpdated, refresh } = useStatus()
 
@@ -60,7 +64,12 @@ function App() {
     if (tab === "sessions") {
       setSessionFilter(filter)
     }
-    setViewContext({ focusLabel, focusFilter: filter })
+    const nextContext = { focusLabel, focusFilter: filter }
+    setViewContext(nextContext)
+    if (filter) localStorage.setItem('gov_ai_focus_filter', filter)
+    else localStorage.removeItem('gov_ai_focus_filter')
+    if (focusLabel) localStorage.setItem('gov_ai_focus_label', focusLabel)
+    else localStorage.removeItem('gov_ai_focus_label')
     setSidebarOpen(false)
   }
 
@@ -173,7 +182,12 @@ function App() {
               </button>
             </div>
             <button
-              onClick={() => { localStorage.removeItem('gov_ai_auth_token'); setIsLoggedIn(false) }}
+              onClick={() => {
+                localStorage.removeItem('gov_ai_auth_token')
+                localStorage.removeItem('gov_ai_focus_filter')
+                localStorage.removeItem('gov_ai_focus_label')
+                setIsLoggedIn(false)
+              }}
               className="surface-card-soft w-full py-2 text-xs cursor-pointer transition-colors hover:text-red-400"
               style={{ color: 'var(--text-secondary)' }}
             >

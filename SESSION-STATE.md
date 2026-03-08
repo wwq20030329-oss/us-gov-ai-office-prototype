@@ -31,6 +31,7 @@ Phase 2 — 产品化收口 + 多代理制度链路做实
   - 在 Office 中补上第一版控制面板：状态筛选、焦点席位切换、跳往焦点任务 / 焦点机构，开始满足 checklist 里的控制层要求。
   - 已开始补交付闭环：服务端 token 读取支持自动回退 OpenClaw 配置，新增 `.env.example`、`npm run dev:server`、`npm run dev:full` 与一键开发脚本骨架。
   - 在 Office 中补了第一版角色详情侧板：当前任务、最近任务、机构归属、活跃状态、最近消息开始进入统一焦点区。
+  - 已开始补跨页上下文继承：App 层现在会持久化焦点机构，Office 返回时能自动恢复并聚焦对应席位。
 
 ## What Is Still Missing
 1. **把多代理协作链路做真**

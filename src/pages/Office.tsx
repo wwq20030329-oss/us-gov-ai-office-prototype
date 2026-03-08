@@ -192,9 +192,16 @@ export default function Office({ viewContext, onNavigate }: Props) {
       setSelectedDeskId(null)
       return
     }
+    if (focusFilter) {
+      const matched = sortedBots.find((bot) => getAgentDisplayName(bot.name, bot.displayName) === focusFilter)
+      if (matched) {
+        setSelectedDeskId(matched.name)
+        return
+      }
+    }
     if (selectedDeskId && sortedBots.some((bot) => bot.name === selectedDeskId)) return
     setSelectedDeskId(sortedBots[0].name)
-  }, [sortedBots, selectedDeskId])
+  }, [sortedBots, selectedDeskId, focusFilter])
 
   const onlineCount = sortedBots.filter((b) => getOperationalStatus(b.status, b.sessions).label === "执行中").length
   const totalTokens = sortedBots.reduce((sum, b) => sum + b.totalTokens, 0)
