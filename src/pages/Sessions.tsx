@@ -314,6 +314,8 @@ export default function Sessions({ initialFilter, viewContext, onNavigate }: Pro
                   <span className="text-[#d4a574] font-mono">🔥 {fmt(tokens)}</span>
                   <span className={sub}>↓{fmt(s.inputTokens)} ↑{fmt(s.outputTokens)}</span>
                   <span className={workflowTone.text}>⛓ {workflowStage.description}</span>
+                  <span className={sub}>📍 {workflowStage.deskHint}</span>
+                  <span className={sub}>➡ {workflowStage.nextStep}</span>
                 </div>
                 {/* Action buttons */}
                 <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -367,6 +369,20 @@ export default function Sessions({ initialFilter, viewContext, onNavigate }: Pro
                           <div className="font-mono text-xs">{smry.avgResponseTimeSec || '-'}s</div>
                         </div>
                       </div>
+                      <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] ${sub}`}>
+                        <div className={`rounded p-2 ${theme === 'light' ? 'bg-gray-50' : 'bg-[#0d0d1a]'}`}>
+                          <div className="text-[9px] opacity-70">当前环节</div>
+                          <div className="mt-1 text-[var(--text-primary)]">{workflowStage.label}</div>
+                        </div>
+                        <div className={`rounded p-2 ${theme === 'light' ? 'bg-gray-50' : 'bg-[#0d0d1a]'}`}>
+                          <div className="text-[9px] opacity-70">承办位置</div>
+                          <div className="mt-1 text-[var(--text-primary)]">{workflowStage.deskHint}</div>
+                        </div>
+                        <div className={`rounded p-2 ${theme === 'light' ? 'bg-gray-50' : 'bg-[#0d0d1a]'}`}>
+                          <div className="text-[9px] opacity-70">下一步</div>
+                          <div className="mt-1 text-[var(--text-primary)]">{workflowStage.nextStep}</div>
+                        </div>
+                      </div>
                       {smry.firstMessage && (
                         <div className={`p-2 rounded text-[10px] ${theme === 'light' ? 'bg-gray-50' : 'bg-[#0d0d1a]'}`}>
                           <div className={`${sub} mb-0.5`}>📌 首条消息 · {new Date(smry.firstMessage.timestamp).toLocaleString('zh-CN')}</div>
@@ -379,6 +395,18 @@ export default function Sessions({ initialFilter, viewContext, onNavigate }: Pro
                           <div className="leading-relaxed break-all">{smry.lastMessage.preview.substring(0, 150)}...</div>
                         </div>
                       )}
+                      <div className={`rounded p-2 text-[10px] border ${theme === 'light' ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-500/10 border-amber-500/20 text-amber-200'}`}>
+                        <div className="font-medium">任务判断</div>
+                        <div className="mt-1 leading-relaxed">
+                          {workflowStage.label === '待复核 / 待续办'
+                            ? '当前更像待复核或待续办任务，建议由下一岗位确认是回退、接力还是结案。'
+                            : workflowStage.label === '归档留痕'
+                              ? '当前更像已结案归档事项，适合用于复盘、审计和再次唤起。'
+                              : workflowStage.label === '承办处理中'
+                                ? '当前处于主责承办阶段，优先关注处理进度与协同链路。'
+                                : '当前事项还在进入阶段，优先完成分派与责任落位。'}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className={`text-center py-3 ${sub} text-xs`}>暂无摘要数据</div>
