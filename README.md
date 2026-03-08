@@ -128,19 +128,26 @@
 
 ```bash
 npm install
-npm run dev
+npm run dev:full
 ```
 
-默认前端：
-- Vite dev server
+默认会同时启动：
+- 前端 Vite dev server（默认 `5173`）
+- 本地 API server（默认 `18790`）
 
-如需完整数据联调，还要同时运行本仓库已有的 server 端：
+也可以分开启动：
 
 ```bash
-cd server
-npm install
-node index.js
+npm run dev
+npm run dev:server
 ```
+
+环境变量示例见：
+- `.env.example`
+
+说明：
+- `server/index.js` 现在会优先读取 `BOLUO_AUTH_TOKEN`
+- 如果未显式设置，会自动回退到 `~/.openclaw/openclaw.json` 中的 `gateway.auth.token`
 
 ## 本次验证
 

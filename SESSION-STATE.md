@@ -29,6 +29,7 @@ Phase 2 — 产品化收口 + 多代理制度链路做实
   - 在 Office 中新增“当前焦点席位”任务板，并把席位卡片补上承办位置提示，开始建立 Office → Sessions / Departments 的更直接联动。
   - 在 Sessions 中补了更明确的任务单语义：承办位置、下一步、任务判断（进入 / 承办 / 待复核 / 归档）开始可见。
   - 在 Office 中补上第一版控制面板：状态筛选、焦点席位切换、跳往焦点任务 / 焦点机构，开始满足 checklist 里的控制层要求。
+  - 已开始补交付闭环：服务端 token 读取支持自动回退 OpenClaw 配置，新增 `.env.example`、`npm run dev:server`、`npm run dev:full` 与一键开发脚本骨架。
 
 ## What Is Still Missing
 1. **把多代理协作链路做真**

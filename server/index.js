@@ -14,9 +14,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = 18790;
+const PORT = Number(process.env.BOLUO_PORT || 18790);
+const HOME = process.env.HOME || '/home/ubuntu';
+const AGENTS_DIR = join(HOME, '.openclaw/agents');
+const CONFIG_PATH = join(HOME, '.openclaw/openclaw.json');
 
-const AUTH_TOKEN = process.env.BOLUO_AUTH_TOKEN || '';
+function getOpenClawConfig() {
+  try {
+    if (existsSync(CONFIG_PATH)) {
+      return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+    }
+  } catch (e) { }
+  return null;
+}
+
+function resolveAuthToken() {
+  if (process.env.BOLUO_AUTH_TOKEN) return process.env.BOLUO_AUTH_TOKEN;
+  if (process.env.GATEWAY_TOKEN) return process.env.GATEWAY_TOKEN;
+  const config = getOpenClawConfig();
+  return config?.gateway?.auth?.token || '';
+}
+
+const AUTH_TOKEN = resolveAuthToken();
 
 const AGENT_DEPT_MAP = {
   'main': '白宫办公厅',
@@ -68,11 +87,7 @@ function isVisibleAgent(agentId, displayName) {
   return !isStaleAgentId(agentId) && !isStaleAgentId(displayName);
 }
 
-const HOME = process.env.HOME || '/home/ubuntu';
-const AGENTS_DIR = join(HOME, '.openclaw/agents');
-const CONFIG_PATH = join(HOME, '.openclaw/openclaw.json');
-
-app.use(cors({ origin: ['https://gui.at2.one'] }));
+app.use(cors({ origin: ['https://gui.at2.one', 'http://localhost:5173', 'http://127.0.0.1:5173'] }));
 app.use(express.json());
 
 function authMiddleware(req, res, next) {
@@ -92,15 +107,6 @@ function formatUptime(seconds) {
   if (h > 0) parts.push(`${h}h`);
   parts.push(`${m}m`);
   return parts.join(' ');
-}
-
-function getOpenClawConfig() {
-  try {
-    if (existsSync(CONFIG_PATH)) {
-      return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
-    }
-  } catch (e) { }
-  return null;
 }
 
 function getAgentSessionData(agentId) {
