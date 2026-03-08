@@ -47,6 +47,8 @@ export default function Office({ viewContext, onNavigate }: Props) {
   const [loading, setLoading] = useState(true)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'idle' | 'offline'>('all')
+  const [selectedDeskId, setSelectedDeskId] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -175,15 +177,29 @@ export default function Office({ viewContext, onNavigate }: Props) {
 
   const focusFilter = viewContext?.focusFilter?.trim()
   const sortedBots = useMemo(() => {
-    const bots = filterVisibleBots(status?.botAccounts || []).sort((a, b) => b.totalTokens - a.totalTokens)
-    return focusFilter
-      ? bots.filter((bot) => getAgentDisplayName(bot.name, bot.displayName) === focusFilter)
-      : bots
-  }, [status, focusFilter])
+    const bots = filterVisibleBots(status?.botAccounts || [])
+      .sort((a, b) => b.totalTokens - a.totalTokens)
+      .filter((bot) => {
+        if (focusFilter && getAgentDisplayName(bot.name, bot.displayName) !== focusFilter) return false
+        if (statusFilter === 'all') return true
+        const operational = getOperationalStatus(bot.status, bot.sessions)
+        return operational.tone === statusFilter
+      })
+    return bots
+  }, [status, focusFilter, statusFilter])
+  useEffect(() => {
+    if (!sortedBots.length) {
+      setSelectedDeskId(null)
+      return
+    }
+    if (selectedDeskId && sortedBots.some((bot) => bot.name === selectedDeskId)) return
+    setSelectedDeskId(sortedBots[0].name)
+  }, [sortedBots, selectedDeskId])
+
   const onlineCount = sortedBots.filter((b) => getOperationalStatus(b.status, b.sessions).label === "执行中").length
   const totalTokens = sortedBots.reduce((sum, b) => sum + b.totalTokens, 0)
   const totalSessions = sortedBots.reduce((sum, b) => sum + b.sessions, 0)
-  const selectedDesk = sortedBots[0]
+  const selectedDesk = sortedBots.find((bot) => bot.name === selectedDeskId) || sortedBots[0]
   const selectedDeskName = selectedDesk ? getAgentDisplayName(selectedDesk.name, selectedDesk.displayName) : undefined
   const selectedDeskOperational = selectedDesk ? getOperationalStatus(selectedDesk.status, selectedDesk.sessions) : null
   const selectedDeskTone = selectedDeskOperational ? getToneClasses(selectedDeskOperational.tone) : null
@@ -211,6 +227,55 @@ export default function Office({ viewContext, onNavigate }: Props) {
           当前办公大厅焦点机构：<span className="text-[var(--accent)] font-medium">{focusFilter}</span>
         </div>
       )}
+
+      <section className="surface-card rounded-2xl p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <div className="section-title">Office 控制面板</div>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">按机构、状态和当前焦点席位切换办公大厅视角；先把控制层补起来，再继续往更强联动推进。</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[38rem]">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'online' | 'idle' | 'offline')}
+              className="px-3 py-2 text-xs rounded-xl border bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)]"
+            >
+              <option value="all">全部席位状态</option>
+              <option value="online">执行中</option>
+              <option value="idle">待命</option>
+              <option value="offline">离线 / 归档</option>
+            </select>
+            <select
+              value={selectedDeskId || ''}
+              onChange={(e) => setSelectedDeskId(e.target.value || null)}
+              className="px-3 py-2 text-xs rounded-xl border bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)]"
+            >
+              {sortedBots.length === 0 && <option value="">暂无可选席位</option>}
+              {sortedBots.map((bot) => (
+                <option key={bot.name} value={bot.name}>{getAgentDisplayName(bot.name, bot.displayName)}</option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => selectedDeskName && onNavigate?.('sessions', selectedDeskName)}
+                disabled={!selectedDeskName}
+                className="flex-1 text-[10px] px-3 py-2 rounded-xl border border-[var(--border-accent)] text-[var(--accent)] bg-[var(--accent-soft)] disabled:opacity-40 cursor-pointer"
+              >
+                焦点任务
+              </button>
+              <button
+                type="button"
+                onClick={() => selectedDeskName && onNavigate?.('departments', selectedDeskName)}
+                disabled={!selectedDeskName}
+                className="flex-1 text-[10px] px-3 py-2 rounded-xl border border-[var(--border-subtle)] text-[var(--text-secondary)] bg-[var(--bg-soft)] disabled:opacity-40 cursor-pointer"
+              >
+                焦点机构
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="panel-hero text-white">
         <div className="border-b border-white/10 px-5 py-4">
@@ -316,7 +381,7 @@ export default function Office({ viewContext, onNavigate }: Props) {
                       type="button"
                       key={bot.name}
                       className="w-full flex items-center justify-between rounded-lg border border-white/8 bg-white/5 px-3 py-2 text-sm text-left hover:bg-white/8 cursor-pointer"
-                      onClick={() => onNavigate?.('sessions', displayName)}
+                      onClick={() => setSelectedDeskId(bot.name)}
                     >
                       <div className="min-w-0">
                         <div className="truncate text-white">#{idx + 1} {displayName}</div>
@@ -373,7 +438,7 @@ export default function Office({ viewContext, onNavigate }: Props) {
             const workflow = getWorkflowStage(Date.now() - (bot.sessions > 0 ? 10 * 60 * 1000 : 8 * 60 * 60 * 1000), bot.sessions)
             const workflowTone = getWorkflowToneClasses(workflow.tone)
             return (
-              <div key={bot.name} className="rounded-xl border border-[var(--border-accent)] bg-black/5 p-3">
+              <div key={bot.name} className={`rounded-xl border p-3 ${selectedDeskId === bot.name ? 'border-[var(--accent)] bg-[var(--accent-soft)]/40' : 'border-[var(--border-accent)] bg-black/5'}`}>
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <div className="font-medium text-[var(--text-primary)]">{displayName}</div>
@@ -390,6 +455,13 @@ export default function Office({ viewContext, onNavigate }: Props) {
                 <div className="mt-1 text-[10px] text-[var(--text-secondary)]">{op.description}</div>
                 <div className={`mt-1 text-[10px] ${workflowTone.text}`}>⛓ {workflow.deskHint}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDeskId(bot.name)}
+                    className="text-[10px] px-2 py-1 rounded border border-[#d4a574]/20 text-[#d4a574]/80 hover:bg-[#d4a574]/5 cursor-pointer"
+                  >
+                    设为焦点席位
+                  </button>
                   <button
                     type="button"
                     onClick={() => onNavigate?.('sessions', displayName)}
