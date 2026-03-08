@@ -193,6 +193,16 @@ export default function Dashboard({ data, onNavigate }: Props) {
     name: getAgentDisplayName(d.name, d.name),
   }))
   const topActive = deptRanking.slice(0, 5)
+  const workflowItems = topActive.map((dept) => ({
+    ...dept,
+    stage: getWorkflowStage(dept.updatedAt, dept.messages),
+  }))
+  const workflowBuckets = [
+    { key: 'intake', label: '指令进入', count: workflowItems.filter(item => item.stage.label === '指令进入').length, note: '等待分派或补上下文' },
+    { key: 'processing', label: '承办处理中', count: workflowItems.filter(item => item.stage.label === '承办处理中').length, note: '机构正在处理事项' },
+    { key: 'review', label: '待复核 / 待续办', count: workflowItems.filter(item => item.stage.label === '待复核 / 待续办').length, note: '等待复核或接力' },
+    { key: 'archived', label: '归档留痕', count: workflowItems.filter(item => item.stage.label === '归档留痕').length, note: '已转入历史记录' },
+  ]
 
   // System load — API may return strings, so coerce to number
   const load1m = Number(summary?.systemLoad?.cpu1m ?? data.cpuLoad?.[0] ?? 0)
@@ -323,6 +333,63 @@ export default function Dashboard({ data, onNavigate }: Props) {
           <div className={`font-mono text-sm mt-1 ${loadColor(memPct)}`}>{memPct.toFixed(0)}%</div>
           <div className={`h-1 rounded-full mt-1.5 ${theme === 'light' ? 'bg-gray-200' : 'bg-[#0d0d1a]'}`}>
             <div className={`h-full rounded-full ${loadBg(memPct).replace('/20', '')}`} style={{ width: `${Math.min(memPct, 100)}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* 事项流转总览 */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-3 sm:gap-4">
+        <div className={`${bg} rounded-lg p-4 sm:p-5`}>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 className={`text-[10px] sm:text-xs uppercase tracking-wider ${sub}`}>⛓ 事项流转总览</h3>
+              <p className={`mt-1 text-xs ${sub}`}>把近期事项压成同一条制度链：进入、承办、复核、归档。</p>
+            </div>
+            <button
+              onClick={() => onNavigate?.('sessions')}
+              className="text-[10px] px-2.5 py-1 rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)] bg-[var(--bg-soft)] cursor-pointer hover:border-[var(--border-accent)]"
+            >
+              查看全部任务
+            </button>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            {workflowBuckets.map((bucket) => (
+              <div key={bucket.key} className={`rounded-xl border p-3 ${theme === 'light' ? 'bg-gray-50 border-gray-200' : 'bg-[#0d0d1a] border-[#d4a574]/10'}`}>
+                <div className={`text-[10px] uppercase tracking-wider ${sub}`}>{bucket.label}</div>
+                <div className="mt-2 font-mono text-2xl text-[#d4a574]">{bucket.count}</div>
+                <div className={`mt-1 text-[11px] leading-relaxed ${sub}`}>{bucket.note}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${bg} rounded-lg p-4 sm:p-5`}>
+          <h3 className={`text-[10px] sm:text-xs uppercase tracking-wider mb-3 ${sub}`}>🧾 当前主链路</h3>
+          <div className="space-y-2">
+            {workflowItems.length > 0 ? workflowItems.map((item, index) => (
+              <button
+                key={`${item.name}-${index}`}
+                onClick={() => onNavigate?.('sessions', item.name)}
+                className={`w-full text-left rounded-xl border p-3 transition-colors cursor-pointer ${theme === 'light' ? 'bg-gray-50 border-gray-200 hover:bg-gray-100' : 'bg-[#0d0d1a] border-[#d4a574]/10 hover:bg-[#16213e]'}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{item.name}</div>
+                    <div className={`mt-1 text-[11px] ${sub}`}>{item.stage.description}</div>
+                  </div>
+                  <span className="text-[10px] px-2 py-1 rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)] bg-[var(--bg-soft)] shrink-0">
+                    {item.stage.label}
+                  </span>
+                </div>
+                <div className={`mt-2 flex flex-wrap gap-3 text-[10px] ${sub}`}>
+                  <span>💬 {item.messages} 条消息</span>
+                  <span>🔥 {fmt(item.tokens)}</span>
+                  <span>⏱ {relTime(item.updatedAt)}</span>
+                </div>
+              </button>
+            )) : (
+              <div className={`text-sm ${sub}`}>暂无可展示的事项流转数据。</div>
+            )}
           </div>
         </div>
       </div>
